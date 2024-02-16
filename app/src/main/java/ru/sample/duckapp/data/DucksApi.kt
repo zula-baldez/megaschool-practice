@@ -7,4 +7,8 @@ import ru.sample.duckapp.domain.Duck
 interface DucksApi {
     @GET("random")
     fun getRandomDuck(): Call<Duck>
+
+//    @GET("http/:code")
+//    fun getRandomDuck(httpCode: Int): Call<Duck>
+
 }
