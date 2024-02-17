@@ -60,8 +60,7 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun getRandomDuckAsync() {
-        loadingProgressBar.visibility = View.VISIBLE
-        duckImageView.visibility = View.GONE
+        switchToLoadScreen()
         ducksApi.getRandomDuck().enqueue(object : Callback<Duck> {
             override fun onResponse(call: Call<Duck>, response: Response<Duck>) {
                 if (response.isSuccessful) {
@@ -113,5 +112,4 @@ class MainActivity : AppCompatActivity() {
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
-
 }
