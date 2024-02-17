@@ -12,18 +12,20 @@ import com.squareup.picasso.Picasso
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import ru.sample.duckapp.data.HttpDuckUrlProvider
 import ru.sample.duckapp.domain.Duck
 import ru.sample.duckapp.infra.Api
+import ru.sample.duckapp.service.UserInputService
+import ru.sample.duckapp.service.UserInputServiceImpl
 
 class MainActivity : AppCompatActivity() {
     private lateinit var duckImageView: ImageView
     private lateinit var loadingProgressBar: ProgressBar
     private lateinit var inputField: EditText
     private lateinit var nextButton: Button
-    private var https =
-        intArrayOf(100, 200, 301, 302, 400, 403, 404, 409, 413, 418, 420, 426, 429, 451, 500)
     private val ducksApi = Api.ducksApi
-
+    private val validationService: UserInputService = UserInputServiceImpl()
+    private val httpDuckUrlProvider: HttpDuckUrlProvider = Api
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -32,7 +34,6 @@ class MainActivity : AppCompatActivity() {
         nextButton = findViewById(R.id.nextButton)
         loadingProgressBar = findViewById(R.id.loadingProgressBar)
         inputField = findViewById(R.id.inputField)
-
         nextButton.setOnClickListener {
             fetchRandomDuckImage()
         }
@@ -43,25 +44,18 @@ class MainActivity : AppCompatActivity() {
         if (inputText == "") {
             getRandomDuckAsync()
         } else {
-            val code = Integer.parseInt(inputText)
-            if (validateInput(code)) {
-                getCodeDuck(code)
+            val httpCode = validationService.parseAndValidateUserHttpCodeInput(inputText)
+            if (!httpCode.isValid) {
+                showToast("Invalid http code!")
+            } else {
+                getCodeDuck(httpCode.code)
             }
         }
     }
 
-    private fun validateInput(code: Int): Boolean {
-        val validation = https.contains(code)
-        if (!validation) {
-            showToast("Invalid http code!")
-        }
-        return validation
-    }
-
     private fun getCodeDuck(code: Int) {
-        loadingProgressBar.visibility = View.VISIBLE
-        duckImageView.visibility = View.GONE
-        loadImage("https://random-d.uk/api/v2/http/$code")
+        switchToLoadScreen()
+        loadImage(httpDuckUrlProvider.getHttpDuckUrl(code))
     }
 
 
@@ -76,13 +70,13 @@ class MainActivity : AppCompatActivity() {
                         loadImage(it.url)
                     }
                 } else {
-                    loadingProgressBar.visibility = View.GONE
-                    duckImageView.visibility = View.VISIBLE
+                    switchToImageScreen()
                 }
             }
 
             override fun onFailure(call: Call<Duck>, t: Throwable) {
-                loadingProgressBar.visibility = View.GONE
+                switchToImageScreen()
+                setErrorScreen()
                 showToast("Error while getting duck")
             }
         })
@@ -91,16 +85,29 @@ class MainActivity : AppCompatActivity() {
     private fun loadImage(imageUrl: String) {
         Picasso.get().load(imageUrl).into(duckImageView, object : com.squareup.picasso.Callback {
             override fun onSuccess() {
-                loadingProgressBar.visibility = View.GONE
-                duckImageView.visibility = View.VISIBLE
+                switchToImageScreen()
             }
 
             override fun onError(e: Exception?) {
-                loadingProgressBar.visibility = View.GONE
-                duckImageView.visibility = View.GONE
-                showToast("Service is unavailable!")
+                switchToImageScreen()
+                setErrorScreen()
+                showToast("Service did not returned your duck(!")
             }
         })
+    }
+
+    private fun switchToLoadScreen() {
+        loadingProgressBar.visibility = View.VISIBLE
+        duckImageView.visibility = View.GONE
+    }
+
+    private fun switchToImageScreen() {
+        loadingProgressBar.visibility = View.GONE
+        duckImageView.visibility = View.VISIBLE
+    }
+
+    private fun setErrorScreen() {
+        duckImageView.setImageResource(R.drawable.fail)
     }
 
     private fun showToast(message: String) {
